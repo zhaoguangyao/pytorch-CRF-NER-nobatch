@@ -38,7 +38,7 @@ def train(model, train_data, dev_data, test_data, vocab_srcs, vocab_tgts, config
             loss = model.neg_log_likelihood(feature, target)
             loss_value = loss.item()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), config.clip_norm)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), config.clip_norm)
             optimizer.step()
 
             accuracy = evaluate_batch(model, batch, feature, vocab_tgts, config)
@@ -90,7 +90,7 @@ def evaluate_batch(model, batch, feature, vocab_tgts, config):
     output = p.decode("utf-8")
     line2 = output.split('\n')[1]
     fours = line2.split(';')
-    accuracy = float(fours[0][-6:-1])
+    accuracy = float(fours[0][-7:-1])
 
     model.train()
     return accuracy
@@ -113,17 +113,17 @@ def evaluate(model, data, step, vocab_srcs, vocab_tgts, dev_test, config):
             for idj in range(len(batch[0][0])):
                 output_file.write(batch[0][0][idj] + " ")
                 output_file.write(batch[0][1][idj] + " ")
-                output_file.write(vocab_tgts.id2word(predict_labels[idj]) + "\n")
+                output_file.write(predict_labels[idj] + "\n")
             output_file.write("\n")
 
     p = subprocess.check_output("perl ./driver/conlleval.pl < " + path, shell=True)
     output = p.decode("utf-8")
     line2 = output.split('\n')[1]
     fours = line2.split(';')
-    accuracy = float(fours[0][-6:-1])
-    precision = float(fours[1][-6:-1])
-    recall = float(fours[2][-6:-1])
-    f1 = float(fours[3][-6:-1])
+    accuracy = float(fours[0][-7:-1])
+    precision = float(fours[1][-7:-1])
+    recall = float(fours[2][-7:-1])
+    f1 = float(fours[3][-7:-1])
 
     print('accuracy: {:.4f} precision: {:.4f}% recall: {:.4f}% f1: {:.4f}% \n'.format(accuracy, precision,
                                                                                       recall, f1))

@@ -33,10 +33,9 @@ class CRF(nn.Module):
         self.hidden2tag = nn.Linear(config.hidden_size * 2, label_size)
 
         self.START_TAG, self.STOP_TAG = label_size - 2, label_size - 1
-        init_transitions = torch.zeros(label_size, label_size)
-        init_transitions[:, self.START_TAG] = -10000.0
-        init_transitions[self.STOP_TAG, :] = -10000.0
-        self.transitions = nn.Parameter(init_transitions)
+        self.transitions = nn.Parameter(torch.randn(label_size, label_size))
+        self.transitions.data[self.START_TAG, :] = -10000
+        self.transitions.data[:, self.STOP_TAG] = -10000
 
     def _get_lstm_features(self, feats):
         feats = self.embedding(feats)
@@ -60,20 +59,27 @@ class CRF(nn.Module):
             alphas_t = []
             for next_tag in range(self.label_size):
                 emit_score = feat[next_tag].view(1, -1).expand(1, self.label_size)
-                trans_score = self.transitions[:, next_tag].view(1, -1)
+                trans_score = self.transitions[next_tag].view(1, -1)
                 next_tag_var = forward_var + trans_score + emit_score
                 alphas_t.append(log_sum_exp(next_tag_var).view(1))
-            init_alphas = torch.cat(alphas_t).view(1, -1)
-        terminal_var = init_alphas + self.transitions[:, self.STOP_TAG]
+            forward_var = torch.cat(alphas_t).view(1, -1)
+        terminal_var = forward_var + self.transitions[self.STOP_TAG]
         alpha = log_sum_exp(terminal_var)
         return alpha
 
     def _score_sentence(self, feats, tags):
+        # score = torch.zeros(1).cuda()
+        # score = score + self.transitions[tags[0]][self.START_TAG]
+        # for i in range(len(feats) - 1):
+        #     score = score + self.transitions[tags[i + 1]][tags[i]] + feats[i][tags[i]]
+        # score = score + self.transitions[self.STOP_TAG][tags[-1]] + feats[-1][tags[-1]]
+        # return score
         score = torch.zeros(1).cuda()
-        score = score + self.transitions[self.START_TAG][tags[0]]
-        for i in range(len(feats) - 1):
-            score = score + self.transitions[tags[i]][tags[i + 1]] + feats[i][tags[i]]
-        score = score + self.transitions[tags[-1]][self.STOP_TAG] + feats[-1][tags[-1]]
+        tags = torch.cat([torch.tensor([self.START_TAG], dtype=torch.long).cuda(), tags])
+        for i, feat in enumerate(feats):
+            score = score + \
+                    self.transitions[tags[i + 1], tags[i]] + feat[tags[i + 1]]
+        score = score + self.transitions[self.STOP_TAG, tags[-1]]
         return score
 
     def _viterbi_decode(self, feats):
@@ -90,7 +96,7 @@ class CRF(nn.Module):
             viterbivars_t = []  # holds the biterbi variables for this step
 
             for next_tag in range(self.label_size):
-                next_tar_var = forward_var + self.transitions[:, next_tag]
+                next_tar_var = forward_var + self.transitions[next_tag]
                 best_tag_id = argmax(next_tar_var)
                 bptrs_t.append(best_tag_id)
                 viterbivars_t.append(next_tar_var[0][best_tag_id].view(1))
@@ -98,7 +104,7 @@ class CRF(nn.Module):
             forward_var = (torch.cat(viterbivars_t) + feat).view(1, -1)
             backpointers.append(bptrs_t)
 
-        terminal_var = forward_var + self.transitions[:, self.STOP_TAG]
+        terminal_var = forward_var + self.transitions[self.STOP_TAG]
         best_tag_id = argmax(terminal_var)
         path_score = terminal_var[0][best_tag_id]
 
