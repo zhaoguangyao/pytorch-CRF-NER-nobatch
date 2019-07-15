@@ -25,7 +25,6 @@ def log_sum_exp2d(vec):
 
     max_score, max_ids = torch.max(vec, dim=0)
     max_score_broadcast = max_score.view(1, -1).expand(label_size, label_size)
-    # t = torch.log(torch.sum(torch.exp(vec - max_score_broadcast), dim=0))
     return max_score + torch.log(torch.sum(torch.exp(vec - max_score_broadcast), dim=0))
 
 
