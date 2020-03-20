@@ -7,7 +7,7 @@ import numpy as np
 
 import torch.optim as optim
 import torch.nn.functional as F
-from driver.data_loader import create_batch_iter, pair_data_variable
+from driver.Loader import create_batch_iter, pair_data_variable
 
 
 def train(model, train_data, dev_data, test_data, vocab_srcs, vocab_tgts, config):
@@ -32,7 +32,7 @@ def train(model, train_data, dev_data, test_data, vocab_srcs, vocab_tgts, config
         batch_iter = 0
         for batch in create_batch_iter(train_data, config.batch_size, shuffle=True):
             start_time = time.time()
-            feature, target = pair_data_variable(batch, vocab_srcs, vocab_tgts, config)
+            feature, target = pair_data_variable(batch, vocab_srcs, vocab_tgts, config.use_cuda)
             model.train()
             optimizer.zero_grad()
             loss = model.neg_log_likelihood(feature, target)
@@ -102,7 +102,7 @@ def evaluate(model, data, step, vocab_srcs, vocab_tgts, dev_test, config):
     path = os.path.join(config.model_path, dev_test + "_out_" + str(step) + ".txt")
     with open(path, 'w', encoding='utf-8') as output_file:
         for batch in create_batch_iter(data, config.batch_size):
-            feature, target = pair_data_variable(batch, vocab_srcs, vocab_tgts, config)
+            feature, target = pair_data_variable(batch, vocab_srcs, vocab_tgts, config.use_cuda)
             _, tags = model(feature)
 
             # 输出到文件
@@ -146,7 +146,7 @@ def evaluate(model, data, step, vocab_srcs, vocab_tgts, dev_test, config):
 #     f_size = [0 for _ in range(len(vocab_tgts.i2w))]
 #
 #     for batch in create_batch_iter(data, config.batch_size):
-#         feature, target, starts, ends, feature_lengths = pair_data_variable(batch, vocab_srcs, vocab_tgts, config)
+#         feature, target, starts, ends, feature_lengths = pair_data_variable(batch, vocab_srcs, vocab_tgts, config.use_cuda)
 #         logit = model(feature, feature_lengths, starts, ends)
 #         correct = (torch.max(logit, 1)[1].view(target.size()).data == target.data).sum().item()
 #         corrects += correct

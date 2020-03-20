@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import os
 import torch
-import numpy
+import numpy as np
 import random
 import argparse
 from TorchNN import *
-from driver.config import Configurable
-from driver.io import read_pkl
-from driver.vocab import PAD, VocabSrc, VocabTgt
-from driver.train_help import train
+from driver.Config import Configurable
+from driver.IO import read_pkl
+from driver.Vocab import PAD, VocabSrc, VocabTgt
+from driver.Trainer import train
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -17,10 +17,13 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 if __name__ == '__main__':
     # random
-    torch.manual_seed(666)
-    torch.cuda.manual_seed(666)
-    random.seed(666)
-    numpy.random.seed(666)
+    seed = 666
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
 
     # gpu
     gpu = torch.cuda.is_available()
@@ -59,12 +62,11 @@ if __name__ == '__main__':
         embedding = read_pkl(config.embedding_pkl)
 
     # model
-    model = CRFParallel(config, feature_voc.size,
+    model = CRF(config, feature_voc.size,
                         embedding[1] if embedding else config.embed_dim,
                         PAD, label_voc.size + 2,
                         embedding[0] if embedding else None)
     if config.use_cuda:
-        torch.backends.cudnn.enabled = True
         model = model.cuda()
 
     # train

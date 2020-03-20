@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import torch
 import numpy as np
-from torch.autograd import Variable
 
 
 def create_batch_iter(data, batch_size, shuffle=False):
@@ -35,7 +34,6 @@ def pair_data_variable(batch, vocab_srcs, vocab_tgts, use_cuda):
 
     src_words = torch.zeros([max_src_length, batch_size], dtype=torch.int64, requires_grad=False)
     tgt_words = torch.zeros([src_length], dtype=torch.int64, requires_grad=False)
-    # src_mask = torch.zeros([batch_size, max_src_length], dtype=torch.uint8, requires_grad=False)
 
     k = 0
     for idx, instance in enumerate(batch):
@@ -43,7 +41,6 @@ def pair_data_variable(batch, vocab_srcs, vocab_tgts, use_cuda):
         labels = vocab_tgts.word2id(instance[1])
         for index, word in enumerate(words):
             src_words[index][idx] = word
-            # src_mask[idx][index] = 1
         for label in labels:
             tgt_words[k] = label
             k += 1
@@ -51,26 +48,5 @@ def pair_data_variable(batch, vocab_srcs, vocab_tgts, use_cuda):
     if use_cuda:
         src_words = src_words.cuda()
         tgt_words = tgt_words.cuda()
-        # src_mask = src_mask.cuda()
 
     return src_words, tgt_words
-
-
-# def pair_data_variable_predict(batch, vocab_srcs, config):
-#     src_lengths = [len(batch[0][0])]
-#     src_words = Variable(torch.LongTensor(src_lengths[0], 1).zero_(), requires_grad=False)
-#
-#     start = []
-#     end = []
-#
-#     for idx, instance in enumerate(batch):
-#         sentence = vocab_srcs.word2id(instance[0])
-#         for index, word in enumerate(sentence):
-#             src_words.data[index][idx] = word
-#         start.append(instance[1])
-#         end.append(instance[2])
-#
-#     if config.use_cuda:
-#         src_words = src_words.cuda()
-#
-#     return src_words, start, end, src_lengths

@@ -33,7 +33,7 @@ class CRF(nn.Module):
         self.hidden2tag = nn.Linear(config.hidden_size * 2, label_size)
 
         self.START_TAG, self.STOP_TAG = label_size - 2, label_size - 1
-        self.transitions = nn.Parameter(torch.randn(label_size, label_size))
+        self.transitions = nn.Parameter(torch.randn(label_size, label_size), requires_grad=True)
         self.transitions.data[self.START_TAG, :] = -10000
         self.transitions.data[:, self.STOP_TAG] = -10000
 
@@ -50,7 +50,9 @@ class CRF(nn.Module):
         return lstm_feats
 
     def _forward_alg(self, feats):
-        init_alphas = torch.full((1, self.label_size), -10000.).cuda()
+        init_alphas = torch.full((1, self.label_size), -10000.)
+        if self.config.use_cuda:
+            init_alphas = init_alphas.cuda()
         init_alphas[0][self.START_TAG] = 0.
         forward_var = init_alphas
 
@@ -68,7 +70,9 @@ class CRF(nn.Module):
 
     def _score_sentence(self, feats, tags):
         # my function
-        score = torch.zeros(1).cuda()
+        score = torch.zeros(1)
+        if self.config.use_cuda:
+            score = score.cuda()
         score = score + self.transitions[tags[0]][self.START_TAG]
         for i in range(len(feats) - 1):
             score = score + self.transitions[tags[i + 1]][tags[i]] + feats[i][tags[i]]
@@ -88,7 +92,9 @@ class CRF(nn.Module):
         backpointers = []
 
         # Initialize the viterbi variables in log space
-        init_vvars = torch.full((1, self.label_size), -10000.).cuda()
+        init_vvars = torch.full((1, self.label_size), -10000.)
+        if self.config.use_cuda:
+            init_vvars = init_vvars.cuda()
         init_vvars[0][self.START_TAG] = 0
 
         # forward_var at step i holds the biterbi variables for step i-1
